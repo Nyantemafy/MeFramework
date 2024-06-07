@@ -11,11 +11,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class Scanner {
-    public void scann(HttpServlet svr, List<String> controllerList,
-            HashMap<String, Mapping> urlMethod) {
+    public void scann(HttpServlet svr, List<String> controllerList, HashMap<String, Mapping> urlMethod) {
         try {
             ServletContext context = svr.getServletContext();
             String packageName = context.getInitParameter("Controller");
+
+            if (!"controller".equals(packageName)) {
+                throw new Exception("Invalid package configuration in web.xml. Expected 'controller' but found '" + packageName + "'");
+            }
 
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             Enumeration<URL> resources = classLoader.getResources(packageName.replace('.', '/'));
@@ -33,8 +36,7 @@ public class Scanner {
         }
     }
 
-    public void scanControllers(File directory, String packageName, List<String> controllerList,
-            HashMap<String, Mapping> urlMethod) {
+    public void scanControllers(File directory, String packageName, List<String> controllerList, HashMap<String, Mapping> urlMethod) throws Exception {
         if (!directory.exists()) {
             return;
         }
@@ -49,53 +51,65 @@ public class Scanner {
                 scanControllers(file, packageName + "." + file.getName(), controllerList, urlMethod);
             } else if (file.getName().endsWith(".class")) {
                 String className = packageName + '.' + file.getName().substring(0, file.getName().length() - 6);
-                try {
-                    Class<?> clazz = Class.forName(className);
-                    if (clazz.isAnnotationPresent(AnnotedController.class)) {
-                        controllerList.add(className);
-                        Method[] methods = clazz.getDeclaredMethods();
-                        for (Method method : methods) {
-                            if (method.isAnnotationPresent(AnnotedMth.class)) {
-                                AnnotedMth annt = method.getAnnotation(AnnotedMth.class);
-                                Mapping map = new Mapping();
-                                map.add(clazz.getName(), method.getName());
-                                urlMethod.put(annt.value(), map);
-                            }
+                Class<?> clazz = Class.forName(className);
+                if (clazz.isAnnotationPresent(AnnotedController.class)) {
+                    controllerList.add(className);
+
+                    System.out.println("Checking methods in class: " + className);
+
+                    checkMethods(clazz);
+
+                    Method[] methods = clazz.getDeclaredMethods();
+                    for (Method method : methods) {
+                        if (method.isAnnotationPresent(AnnotedMth.class)) {
+                            AnnotedMth annt = method.getAnnotation(AnnotedMth.class);
+                            Mapping map = new Mapping();
+                            map.add(clazz.getName(), method.getName());
+                            urlMethod.put(annt.value(), map);
                         }
                     }
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
                 }
             }
         }
     }
 
     public String extractRelativePath(HttpServletRequest request) {
-        String fullUrl = request.getRequestURL().toString(); // Obtenez l'URL complet
-        String[] relativePath = fullUrl.split("/");// Supprimer le chemin de base de l'URL complet
+        String fullUrl = request.getRequestURL().toString();
+        String[] relativePath = fullUrl.split("/");
         return relativePath[relativePath.length - 1];
     }
 
     public Mapping ifMethod(HttpServletRequest request, HashMap<String, Mapping> urlMethod) {
         String method = this.extractRelativePath(request);
-        if (urlMethod.containsKey(method)) {
-            return urlMethod.get(method);
-        }
-        return null;
+        return urlMethod.get(method);
     }
 
-    // Sprint 3 : call the method of the controller
     public Object callMethod(Mapping mapping) throws Exception {
         try {
-            // get the class
             Class<?> clazz = Class.forName(mapping.getKey());
-
-            // Class method
             Object obj = clazz.getDeclaredConstructor().newInstance();
             Method method = clazz.getMethod(mapping.getValue().trim());
-            return (Object) method.invoke(obj);
+            return method.invoke(obj);
         } catch (Exception e) {
             throw e;
+        }
+    }
+
+    public static void checkMethods(Class<?> controllerClass) throws Exception {
+        Map<String, String> annotatedMethods = new HashMap<>();
+
+        for (Method method : controllerClass.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(AnnotedMth.class)) {
+                AnnotedMth annotation = method.getAnnotation(AnnotedMth.class);
+                String url = annotation.value();
+
+                if (annotatedMethods.containsKey(url)) {
+                    throw new Exception("Duplicate annotation found for URL: " + url +
+                            " in methods: " + annotatedMethods.get(url) + " and " + method.getName());
+                }
+
+                annotatedMethods.put(url, method.getName());
+            }
         }
     }
 }
