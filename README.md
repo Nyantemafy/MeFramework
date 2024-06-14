@@ -12,9 +12,12 @@ Bonjour :
         .servlet-class : mg.itu.prom16.FrontController
         .param-value : controller
         .url-pattern : /
+    >acces a notre annotation @Param
 
 *Fonctionnalite :
     >retourne l'url present
     >retourne les methodes de la class
     >retourne la reponse de la methode specifie dans l'annotation si c'est un String ou ModelView   
+    >elle peut gerer les exceptions
+    >l'utilisation de @Param permet l'acces aux donnes qu'on a ecrit dans un fomulaire a partir du modelView
 
