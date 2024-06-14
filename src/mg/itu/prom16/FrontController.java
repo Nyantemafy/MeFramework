@@ -20,30 +20,22 @@ public class FrontController extends HttpServlet {
         ListController = new ArrayList<>();
         urlMethod = new HashMap<>();
         scanne = new Scanner();
-        try {
-            scanne.scann(this, this.ListController, urlMethod);
-        } catch (Exception e) {
-            throw new ServletException(e.getMessage(), e);
-        }
+        scanne.scann(this, this.ListController, urlMethod);
     }
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
+            throws ServletException, IOException, Exception {
         response.setContentType("text/html;charset=UTF-8");
 
-        PrintWriter out = null;
-        try {
-            out = response.getWriter();
+        try (PrintWriter out = response.getWriter()) {
             out.println("<p>" + request.getRequestURL() + "</p>");
             Mapping mapping = scanne.ifMethod(request, this.urlMethod);
             if (mapping != null) {
                 out.println("<p> Classe : " + mapping.getKey() + "</p>");
                 out.println("<p> Methode: " + mapping.getValue() + "</p>");
 
-                Object result = this.scanne.callMethod(mapping);
-                if (result instanceof String) {
-                    out.println("<p> Value returned : " + result + "</p>");
-                } else if (result instanceof ModelView) {
+                Object result = this.scanne.callMethod(mapping, request);
+                if (result instanceof ModelView) {
                     ModelView modelView = (ModelView) result;
                     String url = modelView.getUrl();
                     HashMap<String, Object> data = modelView.getData();
@@ -52,27 +44,12 @@ public class FrontController extends HttpServlet {
                         request.setAttribute(key, data.get(key));
                     }
 
-                    out.close();
                     request.getRequestDispatcher(url).forward(request, response);
                 } else {
-                    throw new IllegalArgumentException("Type de retour non reconnu");
+                    out.println("<p> Type de retour non reconnu </p>");
                 }
             } else {
-                throw new IllegalStateException("Error 404 : Not found");
-            }
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            if (out != null) {
-                out.println("<p> Exception : " + e.getMessage() + "</p>");
-                e.printStackTrace(out);
-            }
-        } catch (Exception e) {
-            if (out != null) {
-                out.println("<p> Exception : " + e.getMessage() + "</p>");
-                e.printStackTrace(out);
-            }
-        } finally {
-            if (out != null) {
-                out.close();
+                out.println("<p> Error 404 : Not found </p>");
             }
         }
     }

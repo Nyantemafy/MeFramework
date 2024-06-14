@@ -2,23 +2,18 @@ package mg.itu.prom16;
 
 import java.io.File;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.util.*;
 import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 
 public class Scanner {
+
     public void scann(HttpServlet svr, List<String> controllerList, HashMap<String, Mapping> urlMethod) {
         try {
             ServletContext context = svr.getServletContext();
             String packageName = context.getInitParameter("Controller");
-
-            if (!"controller".equals(packageName)) {
-                throw new Exception("Invalid package configuration in web.xml. Expected 'controller' but found '" + packageName + "'");
-            }
 
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             Enumeration<URL> resources = classLoader.getResources(packageName.replace('.', '/'));
@@ -36,7 +31,7 @@ public class Scanner {
         }
     }
 
-    public void scanControllers(File directory, String packageName, List<String> controllerList, HashMap<String, Mapping> urlMethod) throws Exception {
+    public void scanControllers(File directory, String packageName, List<String> controllerList, HashMap<String, Mapping> urlMethod) {
         if (!directory.exists()) {
             return;
         }
@@ -51,23 +46,22 @@ public class Scanner {
                 scanControllers(file, packageName + "." + file.getName(), controllerList, urlMethod);
             } else if (file.getName().endsWith(".class")) {
                 String className = packageName + '.' + file.getName().substring(0, file.getName().length() - 6);
-                Class<?> clazz = Class.forName(className);
-                if (clazz.isAnnotationPresent(AnnotedController.class)) {
-                    controllerList.add(className);
-
-                    System.out.println("Checking methods in class: " + className);
-
-                    checkMethods(clazz);
-
-                    Method[] methods = clazz.getDeclaredMethods();
-                    for (Method method : methods) {
-                        if (method.isAnnotationPresent(AnnotedMth.class)) {
-                            AnnotedMth annt = method.getAnnotation(AnnotedMth.class);
-                            Mapping map = new Mapping();
-                            map.add(clazz.getName(), method.getName());
-                            urlMethod.put(annt.value(), map);
+                try {
+                    Class<?> clazz = Class.forName(className);
+                    if (clazz.isAnnotationPresent(AnnotedController.class)) {
+                        controllerList.add(className);
+                        Method[] methods = clazz.getDeclaredMethods();
+                        for (Method method : methods) {
+                            if (method.isAnnotationPresent(AnnotedMth.class)) {
+                                AnnotedMth annt = method.getAnnotation(AnnotedMth.class);
+                                Mapping map = new Mapping();
+                                map.add(clazz.getName(), method.getName());
+                                urlMethod.put(annt.value(), map);
+                            }
                         }
                     }
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
                 }
             }
         }
@@ -81,35 +75,58 @@ public class Scanner {
 
     public Mapping ifMethod(HttpServletRequest request, HashMap<String, Mapping> urlMethod) {
         String method = this.extractRelativePath(request);
-        return urlMethod.get(method);
-    }
-
-    public Object callMethod(Mapping mapping) throws Exception {
-        try {
-            Class<?> clazz = Class.forName(mapping.getKey());
-            Object obj = clazz.getDeclaredConstructor().newInstance();
-            Method method = clazz.getMethod(mapping.getValue().trim());
-            return method.invoke(obj);
-        } catch (Exception e) {
-            throw e;
+        if (urlMethod.containsKey(method)) {
+            return urlMethod.get(method);
         }
+        return null;
     }
 
-    public static void checkMethods(Class<?> controllerClass) throws Exception {
-        Map<String, String> annotatedMethods = new HashMap<>();
+    public Object callMethod(Mapping mapping, HttpServletRequest request) throws Exception {
+        Class<?> clazz = Class.forName(mapping.getKey());
+        Method method = findMethod(clazz, mapping.getValue());
+        Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
+        Object[] params = getMethodParameters(method, request);
+        return method.invoke(controllerInstance, params);
+    }
 
-        for (Method method : controllerClass.getDeclaredMethods()) {
-            if (method.isAnnotationPresent(AnnotedMth.class)) {
-                AnnotedMth annotation = method.getAnnotation(AnnotedMth.class);
-                String url = annotation.value();
-
-                if (annotatedMethods.containsKey(url)) {
-                    throw new Exception("Duplicate annotation found for URL: " + url +
-                            " in methods: " + annotatedMethods.get(url) + " and " + method.getName());
-                }
-
-                annotatedMethods.put(url, method.getName());
+    private Method findMethod(Class<?> clazz, String methodName) throws NoSuchMethodException {
+        Method[] methods = clazz.getMethods();
+        for (Method method : methods) {
+            if (method.getName().equals(methodName)) {
+                return method;
             }
         }
+        throw new NoSuchMethodException("Method " + methodName + " not found in " + clazz.getName());
+    }
+
+    private Object[] getMethodParameters(Method method, HttpServletRequest request) {
+        Parameter[] parameters = method.getParameters();
+        Object[] params = new Object[parameters.length];
+        for (int i = 0; i < parameters.length; i++) {
+            if (parameters[i].isAnnotationPresent(Param.class)) {
+                Param param = parameters[i].getAnnotation(Param.class);
+                String paramName = param.name();
+                String paramValue = request.getParameter(paramName);
+                params[i] = convertParameter(paramValue, parameters[i].getType());
+            } else {
+                params[i] = null; // Ou toute autre valeur par défaut que vous souhaitez
+            }
+        }
+        return params;
+    }
+
+    private Object convertParameter(String parameter, Class<?> targetType) {
+        if (parameter == null) {
+            return null;
+        }
+        if (targetType == String.class) {
+            return parameter;
+        } else if (targetType == int.class || targetType == Integer.class) {
+            return Integer.parseInt(parameter);
+        } else if (targetType == long.class || targetType == Long.class) {
+            return Long.parseLong(parameter);
+        }
+        // Ajoutez ici d'autres conversions si nécessaire
+        return null;
     }
 }
