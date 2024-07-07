@@ -29,9 +29,12 @@ public class FrontController extends HttpServlet {
 
         try (PrintWriter out = response.getWriter()) {
             out.println("<p>" + request.getRequestURL() + "</p>");
-            out.print("Liste des controlleurs du projet : \n");
-            for(String key : this.urlMethod.keySet()){
-                out.print("Cet url : "+ key +" est associé à la class "+ this.urlMethod.get(key));
+            if (scanne.ifMethod(request, this.urlMethod) != null) {
+                Mapping mapping = scanne.ifMethod(request, this.urlMethod);
+                out.println("<p> Classe : " + mapping.getKey() + "</p>");
+                out.println("<p> Mehtode: " + mapping.getValue() + "</p>");
+            } else {
+                out.println("<p> Error 404 : Not found </p>");
             }
         }
     }
