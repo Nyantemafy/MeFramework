@@ -2,15 +2,17 @@ package mg.itu.prom16;
 
 import java.io.File;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.util.*;
 import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class Scanner {
-
-    public void scann(HttpServlet svr, List<String> controllerList, HashMap<String, Mapping> urlMethod) {
+    public void scann(HttpServlet svr, List<String> controllerList,
+            HashMap<String, Mapping> urlMethod) {
         try {
             ServletContext context = svr.getServletContext();
             String packageName = context.getInitParameter("Controller");
@@ -31,7 +33,8 @@ public class Scanner {
         }
     }
 
-    public void scanControllers(File directory, String packageName, List<String> controllerList, HashMap<String, Mapping> urlMethod) {
+    public void scanControllers(File directory, String packageName, List<String> controllerList,
+            HashMap<String, Mapping> urlMethod) {
         if (!directory.exists()) {
             return;
         }
@@ -68,8 +71,8 @@ public class Scanner {
     }
 
     public String extractRelativePath(HttpServletRequest request) {
-        String fullUrl = request.getRequestURL().toString();
-        String[] relativePath = fullUrl.split("/");
+        String fullUrl = request.getRequestURL().toString(); // Obtenez l'URL complet
+        String[] relativePath = fullUrl.split("/");// Supprimer le chemin de base de l'URL complet
         return relativePath[relativePath.length - 1];
     }
 
@@ -81,52 +84,4 @@ public class Scanner {
         return null;
     }
 
-    public Object callMethod(Mapping mapping, HttpServletRequest request) throws Exception {
-        Class<?> clazz = Class.forName(mapping.getKey());
-        Method method = findMethod(clazz, mapping.getValue());
-        Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
-        Object[] params = getMethodParameters(method, request);
-        return method.invoke(controllerInstance, params);
-    }
-
-    private Method findMethod(Class<?> clazz, String methodName) throws NoSuchMethodException {
-        Method[] methods = clazz.getMethods();
-        for (Method method : methods) {
-            if (method.getName().equals(methodName)) {
-                return method;
-            }
-        }
-        throw new NoSuchMethodException("Method " + methodName + " not found in " + clazz.getName());
-    }
-
-    private Object[] getMethodParameters(Method method, HttpServletRequest request) {
-        Parameter[] parameters = method.getParameters();
-        Object[] params = new Object[parameters.length];
-        for (int i = 0; i < parameters.length; i++) {
-            if (parameters[i].isAnnotationPresent(Param.class)) {
-                Param param = parameters[i].getAnnotation(Param.class);
-                String paramName = param.name();
-                String paramValue = request.getParameter(paramName);
-                params[i] = convertParameter(paramValue, parameters[i].getType());
-            } else {
-                params[i] = null; // Ou toute autre valeur par défaut que vous souhaitez
-            }
-        }
-        return params;
-    }
-
-    private Object convertParameter(String parameter, Class<?> targetType) {
-        if (parameter == null) {
-            return null;
-        }
-        if (targetType == String.class) {
-            return parameter;
-        } else if (targetType == int.class || targetType == Integer.class) {
-            return Integer.parseInt(parameter);
-        } else if (targetType == long.class || targetType == Long.class) {
-            return Long.parseLong(parameter);
-        }
-        // Ajoutez ici d'autres conversions si nécessaire
-        return null;
-    }
 }
