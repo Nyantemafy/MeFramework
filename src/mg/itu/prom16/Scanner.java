@@ -103,6 +103,7 @@ public class Scanner {
     }
     
     public Object callMethod(Mapping mapping, HttpServletRequest request) throws Exception {
+        System.out.println("Hello World!");
         Class<?> clazz = Class.forName(mapping.getKey());
         Method method = findMethod(clazz, mapping.getValue());
         Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
@@ -140,10 +141,9 @@ public class Scanner {
                     params[i] = createModelObject(request, paramType.getName());
                     System.out.println("Objet créé : " + params[i]);
                 }
-                System.out.println("ts niditra");
             } else {
-                params[i] = null;
-                System.out.println("null hoe");
+                System.out.println("shhhhhhhhh");
+                throw new Exception("ETU002381 pas de parametre");
             }
         }
         return params;
