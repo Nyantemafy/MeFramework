@@ -17,6 +17,11 @@
     <param-value> controller </param-value>
   </context-param>
 
+  <context-param>
+    <param-name>Model</param-name>
+    <param-value> model </param-value>
+  </context-param>
+
 
   <!-- Mapping des URLs pour le FrontController -->
   <servlet-mapping>

@@ -23,6 +23,12 @@ set src=%work_dir%\src
 rem Le dossier web inf de temp
 set web_inf=%temp%\WEB-INF
 
+rem Le dossier views de temp
+set view=%temp%\views
+
+rem Le contenue du dossier views 
+set test_jsp=%work_dir%\views\*
+
 
 @rem Tester si le dossier temp existe deja
     if exist "%temp%" (
@@ -33,6 +39,8 @@ set web_inf=%temp%\WEB-INF
     mkdir "%temp%"
 
 @rem Creation de la structure de deployement
+    :: Creation du dossier views
+    mkdir "%view%"
     :: Creation du dossier WebInf
     mkdir "%web_inf%"
     :: Creation de web inf lib
@@ -52,6 +60,8 @@ set web_inf=%temp%\WEB-INF
     del src.txt > NUL
 
 @rem Copie des fichiers avan deployement
+    :: Copier le fichier jsp
+    xcopy "%test_jsp%" "%temp%\views"
     :: Copier le fichier web xml
     xcopy "%web_xml%" "%web_inf%"
     :: Transfert des librairies
