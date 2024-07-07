@@ -1,8 +1,5 @@
 package mg.itu.prom16;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class Mapping {
     String nameClass;
     String nameMethod; 
