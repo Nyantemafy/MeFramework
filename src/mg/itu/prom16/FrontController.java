@@ -21,9 +21,13 @@ public class FrontController extends HttpServlet {
         ListController = new ArrayList<>();
         urlMethod = new HashMap<>();
         scanne = new Scanner();
-        scanne.scann(this, this.ListController, urlMethod);
-        getServletContext().setAttribute("controllerList", ListController);
-        getServletContext().setAttribute("urlMethod", urlMethod);
+        try {
+            scanne.scann(this, this.ListController, urlMethod);
+            getServletContext().setAttribute("controllerList", ListController);
+            getServletContext().setAttribute("urlMethod", urlMethod);
+        } catch (Exception e) {
+            throw new ServletException(e.getMessage(), e);
+        }
     }
     
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -88,6 +92,11 @@ public class FrontController extends HttpServlet {
                 } else {
                     out.println("<p> Error 404 : Not found </p>");
                 }
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            if (out != null) {
+                out.println("<p> Exception : " + e.getMessage() + "</p>");
+                e.printStackTrace(out);
             }
         }catch(Exception e){
             out.println("<p> Exception : " + e.getMessage() + "</p>");

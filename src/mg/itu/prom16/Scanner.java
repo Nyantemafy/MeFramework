@@ -141,6 +141,8 @@ public class Scanner {
                     params[i] = createModelObject(request, paramType.getName());
                     System.out.println("Objet créé : " + params[i]);
                 }
+            } else if (paramType == CurrentSession.class) {
+                params[i] = new CurrentSession(request.getSession());
             } else {
                 System.out.println("shhhhhhhhh");
                 throw new Exception("ETU002381 pas de parametre");
