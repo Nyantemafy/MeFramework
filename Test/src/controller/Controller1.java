@@ -29,19 +29,25 @@ public class Controller1 {
         mv.addObject("formulaire", "Hello from ModelView!");
         return mv;
     }
-    @AnnotedMth("submitForm")
-    public ModelView submitForm(@Param(name="name") String name, @Param(name="email") String email) {
-        ModelView mv = new ModelView("/views/result.jsp");
-        mv.addObject("name", name);
-        mv.addObject("email", email);
-        return mv;
-    }
+    // @AnnotedMth("submitForm")
+    // public ModelView submitForm(@Param(name="name") String name, @Param(name="email") String email) {
+    //     ModelView mv = new ModelView("/views/result.jsp");
+    //     mv.addObject("name", name);
+    //     mv.addObject("email", email);
+    //     return mv;
+    // }
     @AnnotedMth("submitObject")
     public ModelView submitFormObject(@Param(name="emp") Employe emp) {
         ModelView mv = new ModelView("/views/resultObject.jsp");
         mv.addObject("emp", emp);
         return mv;
     }
-
+    @AnnotedMth("submitForm")
+    public ModelView submitForm(String name, String email) {
+        ModelView mv = new ModelView("/views/result.jsp");
+        mv.addObject("name", name);
+        mv.addObject("email", email);
+        return mv;
+    }
 }
 

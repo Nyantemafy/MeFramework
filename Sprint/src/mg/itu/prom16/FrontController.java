@@ -30,7 +30,9 @@ public class FrontController extends HttpServlet {
             throws ServletException, IOException, Exception {
         response.setContentType("text/html;charset=UTF-8");
 
-        try (PrintWriter out = response.getWriter()) {
+        PrintWriter out=null;
+        try {
+            out = response.getWriter();
             String uri = request.getRequestURI();
             String contextPath = request.getContextPath();
             String path = uri.substring(contextPath.length());
@@ -86,6 +88,14 @@ public class FrontController extends HttpServlet {
                 } else {
                     out.println("<p> Error 404 : Not found </p>");
                 }
+            }
+        }catch(Exception e){
+            out.println("<p> Exception : " + e.getMessage() + "</p>");
+            e.printStackTrace(out);
+        }
+        finally{
+            if(out!=null){
+                out.close();
             }
         }
     }
