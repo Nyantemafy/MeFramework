@@ -1,23 +1,18 @@
 Bonjour : 
 *MeFramework est un framework qui utilise le méthode MVC (Model View Controller) 
 *Initialisation de l'environnemt : 
-    > Copier le fichier,"Meframework.jar" dans votre projet java ,dans le répemrtoire "\lib"
+    > Copier le fichier,"Meframework.jar" dans votre projet java ,dans le répertoire "\lib"
     
 *Utilisation : 
     > mette vos controller dans un dossie controller
     > il est initial d'annote vos class java par l'annotation : @AnnotedController()
     > annote les methodes de la classe : @AnnotedMth("votre_url")
-    > on a aussi un class ModelView avec un methode addObject(String key, Object value) 
     > configurer votre web.xml avec :
         .servlet-class : mg.itu.prom16.FrontController
         .param-value : controller
         .url-pattern : /
-    >acces a notre annotation @Param
 
 *Fonctionnalite :
     >retourne l'url present
     >retourne les methodes de la class
-    >retourne la reponse de la methode specifie dans l'annotation si c'est un String ou ModelView   
-    >elle peut gerer les exceptions
-    >l'utilisation de @Param permet l'acces aux donnes qu'on a ecrit dans un fomulaire a partir du modelView
 

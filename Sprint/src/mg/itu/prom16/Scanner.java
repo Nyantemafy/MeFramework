@@ -53,19 +53,18 @@ public class Scanner {
                 scanControllers(file, packageName + "." + file.getName(), controllerList, urlMethod);
             } else if (file.getName().endsWith(".class")) {
                 String className = packageName + '.' + file.getName().substring(0, file.getName().length() - 6);
-                Class<?> clazz = Class.forName(className);
-                if (clazz.isAnnotationPresent(AnnotedController.class)) {
-                    controllerList.add(className);
-
-                    checkMethods(clazz);
-
-                    Method[] methods = clazz.getDeclaredMethods();
-                    for (Method method : methods) {
-                        if (method.isAnnotationPresent(AnnotedMth.class)) {
-                            AnnotedMth annt = method.getAnnotation(AnnotedMth.class);
-                            Mapping map = new Mapping();
-                            map.add(clazz.getName(), method.getName());
-                            urlMethod.put(annt.value(), map);
+                try {
+                    Class<?> clazz = Class.forName(className);
+                    if (clazz.isAnnotationPresent(AnnotedController.class)) {
+                        controllerList.add(className);
+                        Method[] methods = clazz.getDeclaredMethods();
+                        for (Method method : methods) {
+                            if (method.isAnnotationPresent(AnnotedMth.class)) {
+                                AnnotedMth annt = method.getAnnotation(AnnotedMth.class);
+                                Mapping map = new Mapping();
+                                map.add(clazz.getName(), method.getName());
+                                urlMethod.put(annt.value(), map);
+                            }
                         }
                     }
                 }
@@ -73,165 +72,18 @@ public class Scanner {
         }
     }
 
-    public static void checkMethods(Class<?> controllerClass) throws Exception {
-        Map<String, String> annotatedMethods = new HashMap<>();
-
-        for (Method method : controllerClass.getDeclaredMethods()) {
-            if (method.isAnnotationPresent(AnnotedMth.class)) {
-                AnnotedMth annotation = method.getAnnotation(AnnotedMth.class);
-                String url = annotation.value();
-
-                if (annotatedMethods.containsKey(url)) {
-                    throw new Exception("Duplicate annotation found for URL: " + url +
-                            " in methods: " + annotatedMethods.get(url) + " and " + method.getName());
-                }
-
-                annotatedMethods.put(url, method.getName());
-            }
-        }
-    }
-
     public String extractRelativePath(HttpServletRequest request) {
-        String fullUrl = request.getRequestURL().toString();
-        String[] relativePath = fullUrl.split("/");
+        String fullUrl = request.getRequestURL().toString(); // Obtenez l'URL complet
+        String[] relativePath = fullUrl.split("/");// Supprimer le chemin de base de l'URL complet
         return relativePath[relativePath.length - 1];
     }
 
     public Mapping ifMethod(HttpServletRequest request, HashMap<String, Mapping> urlMethod) {
         String method = this.extractRelativePath(request);
-        return urlMethod.get(method);
-    }
-    
-    public Object callMethod(Mapping mapping, HttpServletRequest request) throws Exception {
-        System.out.println("Hello World!");
-        Class<?> clazz = Class.forName(mapping.getKey());
-        Method method = findMethod(clazz, mapping.getValue());
-        Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
-        Object[] params = getMethodParameters(method, request);
-        return method.invoke(controllerInstance, params);
+        if (urlMethod.containsKey(method)) {
+            return urlMethod.get(method);
+        }
+        return null;
     }
 
-    public Method findMethod(Class<?> clazz, String methodName) throws NoSuchMethodException {
-        Method[] methods = clazz.getMethods();
-        for (Method method : methods) {
-            if (method.getName().equals(methodName)) {
-                return method;
-            }
-        }
-        throw new NoSuchMethodException("Method " + methodName + " not found in " + clazz.getName());
-    }
-
-    public Object[] getMethodParameters(Method method, HttpServletRequest request) throws Exception {
-        Parameter[] parameters = method.getParameters();
-        Object[] params = new Object[parameters.length];
-    
-        for (int i = 0; i < parameters.length; i++) {
-            Parameter parameter = parameters[i];
-            Class<?> paramType = parameter.getType();
-    
-            if (parameter.isAnnotationPresent(Param.class)) {
-                Param param = parameter.getAnnotation(Param.class);
-                String paramName = param.name();
-                String paramValue = request.getParameter(paramName);
-                params[i] = convertParameter(paramValue, paramType);
-                System.out.println("Valeur du paramètre : " + params[i]);
-    
-                if (paramType != String.class) {
-                    System.out.println("Appel de createModelObject pour le type : " + paramType.getName());
-                    params[i] = createModelObject(request, paramType.getName());
-                    System.out.println("Objet créé : " + params[i]);
-                }
-            } else {
-                System.out.println("shhhhhhhhh");
-                throw new Exception("ETU002381 pas de parametre");
-            }
-        }
-        return params;
-    }    
-    
-    public Object createModelObject(HttpServletRequest request, String nameObject) throws Exception {
-        System.out.println("createModelObject appelé pour : " + nameObject);
-        
-        Class<?> clazz = Class.forName(nameObject);
-        Object obj = clazz.getDeclaredConstructor().newInstance();
-        
-        Enumeration<String> parameterNames = request.getParameterNames();
-    
-        if (!parameterNames.hasMoreElements()) {
-            System.out.println("Aucun paramètre trouvé");
-        }
-        
-        while (parameterNames.hasMoreElements()) {
-            String parameterName = parameterNames.nextElement();
-            System.out.println("Paramètre trouvé : " + parameterName);
-    
-                Enumeration<String> innerParameterNames = request.getParameterNames();
-    
-                if (!innerParameterNames.hasMoreElements()) {
-                    System.out.println("Aucun attribut trouvé");
-                }
-    
-                while (innerParameterNames.hasMoreElements()) {
-                    String attrib = innerParameterNames.nextElement();
-                    System.out.println("Attribut trouvé : " + attrib);
-    
-                        String value = request.getParameter(attrib);
-                        System.out.println("Valeur de l'attribut : " + value);
-
-                        String[] nameAttribute = attrib.trim().split("\\.");
-                        String firstLetter = nameAttribute[1].substring(0, 1).toUpperCase();
-                        String restOfTheWord = nameAttribute[1].substring(1);
-                        String formattedName = firstLetter + restOfTheWord;
-                        System.out.println(formattedName);
-                        String setterMethodName = "set" + formattedName;
-                        System.out.println("Méthode setter recherchée : " + setterMethodName);
-    
-                            Method[] methods = clazz.getMethods();
-                            Method setterMethod = null;
-                            for (Method method : methods) {
-                                if (method.getName().equalsIgnoreCase(setterMethodName)) {
-                                    setterMethod = method;
-                                    break;
-                                }
-                            }
-    
-                            if (setterMethod != null) {
-                                Class<?>[] parameterTypes = setterMethod.getParameterTypes();
-                                Object convertedValue = convertParameter(value, parameterTypes[0]);
-                                System.out.println("Valeur convertie : " + convertedValue + " pour le type : " + parameterTypes[0].getName());
-                                setterMethod.invoke(obj, convertedValue);
-                                System.out.println("Valeur définie dans l'objet : " + convertedValue);
-                            } else {
-                                throw new Exception("Méthode setter non trouvée pour l'attribut : " + nameAttribute);
-                            }
-                }
-        }
-        System.out.println("Objet final : " + obj);
-        return obj;
-    }
-        
-    private Object convertParameter(String value, Class<?> targetType) {
-        if (value == null) {
-            return null;
-        }
-    
-        if (targetType == String.class) {
-            return value;
-        } else if (targetType == int.class || targetType == Integer.class) {
-            return Integer.parseInt(value);
-        } else if (targetType == long.class || targetType == Long.class) {
-            return Long.parseLong(value);
-        } else if (targetType == double.class || targetType == Double.class) {
-            return Double.parseDouble(value);
-        } else if (targetType == boolean.class || targetType == Boolean.class) {
-            return Boolean.parseBoolean(value);
-        }
-    
-        // Ajoutez d'autres types de conversion si nécessaire
-    
-        return value;
-    }    
-
-} 
-
-// http://localhost:8080/sprint7/submitObject?emp.name=h&emp.age=1
+}

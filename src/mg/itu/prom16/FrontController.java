@@ -29,25 +29,10 @@ public class FrontController extends HttpServlet {
 
         try (PrintWriter out = response.getWriter()) {
             out.println("<p>" + request.getRequestURL() + "</p>");
-            Mapping mapping = scanne.ifMethod(request, this.urlMethod);
-            if (mapping != null) {
+            if (scanne.ifMethod(request, this.urlMethod) != null) {
+                Mapping mapping = scanne.ifMethod(request, this.urlMethod);
                 out.println("<p> Classe : " + mapping.getKey() + "</p>");
-                out.println("<p> Methode: " + mapping.getValue() + "</p>");
-
-                Object result = this.scanne.callMethod(mapping, request);
-                if (result instanceof ModelView) {
-                    ModelView modelView = (ModelView) result;
-                    String url = modelView.getUrl();
-                    HashMap<String, Object> data = modelView.getData();
-
-                    for (String key : data.keySet()) {
-                        request.setAttribute(key, data.get(key));
-                    }
-
-                    request.getRequestDispatcher(url).forward(request, response);
-                } else {
-                    out.println("<p> Type de retour non reconnu </p>");
-                }
+                out.println("<p> Mehtode: " + mapping.getValue() + "</p>");
             } else {
                 out.println("<p> Error 404 : Not found </p>");
             }
