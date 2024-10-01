@@ -6,6 +6,9 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.*;
 import java.net.URL;
 import java.util.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -42,12 +45,12 @@ public class Scanner {
         if (!directory.exists()) {
             return;
         }
-
+    
         File[] files = directory.listFiles();
         if (files == null) {
             return;
         }
-
+    
         for (File file : files) {
             if (file.isDirectory()) {
                 scanControllers(file, packageName + "." + file.getName(), controllerList, urlMethod);
@@ -56,24 +59,33 @@ public class Scanner {
                 Class<?> clazz = Class.forName(className);
                 if (clazz.isAnnotationPresent(AnnotedController.class)) {
                     controllerList.add(className);
-
+    
                     checkMethods(clazz);
-
+    
                     Method[] methods = clazz.getDeclaredMethods();
                     for (Method method : methods) {
                         if (method.isAnnotationPresent(AnnotedMth.class)) {
                             AnnotedMth annt = method.getAnnotation(AnnotedMth.class);
                             Mapping map = new Mapping();
-                            map.add(clazz.getName(), method.getName());
+                            map.add(clazz.getName(), method.getName(), "AnnotedMth");
                             urlMethod.put(annt.value(), map);
+                        } 
+                        if (method.isAnnotationPresent(Restapi.class)) {
+                            Restapi restapi = method.getAnnotation(Restapi.class);
+                            Mapping map = urlMethod.get(restapi.value());
+                            if (map == null) {
+                                map = new Mapping();
+                            }
+                            map.add(clazz.getName(), method.getName(), "Restapi");
+                            urlMethod.put(restapi.value(), map);
                         }
                     }
                 }
             }
         }
     }
-
-    public static void checkMethods(Class<?> controllerClass) throws Exception {
+    
+   public static void checkMethods(Class<?> controllerClass) throws Exception {
         Map<String, String> annotatedMethods = new HashMap<>();
 
         for (Method method : controllerClass.getDeclaredMethods()) {
@@ -140,8 +152,9 @@ public class Scanner {
                     System.out.println("Appel de createModelObject pour le type : " + paramType.getName());
                     params[i] = createModelObject(request, paramType.getName());
                     System.out.println("Objet créé : " + params[i]);
-                }
+                }                           
             } else if (paramType == CurrentSession.class) {
+                System.out.println("CurrentSession");
                 params[i] = new CurrentSession(request.getSession());
             } else {
                 System.out.println("shhhhhhhhh");
@@ -150,7 +163,6 @@ public class Scanner {
         }
         return params;
     }    
-    
     public Object createModelObject(HttpServletRequest request, String nameObject) throws Exception {
         System.out.println("createModelObject appelé pour : " + nameObject);
         
@@ -236,4 +248,3 @@ public class Scanner {
 
 } 
 
-// http://localhost:8080/sprint7/submitObject?emp.name=h&emp.age=1

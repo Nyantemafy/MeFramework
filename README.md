@@ -17,6 +17,7 @@ Bonjour :
         .servlet-class : mg.itu.prom16.FrontController
         .param-value : controller
         .url-pattern : /
+    > mettre l'Annotation RestApi pour avoir en json les resultats
 
 *Fonctionnalite :
     >retourne l'url present
@@ -26,4 +27,5 @@ Bonjour :
     >Gere aussi les ModelView avec en parametre un Object
     >Gere les exception sur le jsp et le controllerr Tomcat
     >pouvoir gere les session  
+    >Gere les json
 

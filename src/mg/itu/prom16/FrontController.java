@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
+import com.google.gson.Gson;
 
 public class FrontController extends HttpServlet {
     List<String> ListController;
@@ -41,7 +42,7 @@ public class FrontController extends HttpServlet {
             String contextPath = request.getContextPath();
             String path = uri.substring(contextPath.length());
 
-            System.out.println(path);
+            // System.out.println(path);
             
             if ("/".equals(path)) {
                 List<String> controllerList = (List<String>) getServletContext().getAttribute("controllerList");
@@ -71,34 +72,49 @@ public class FrontController extends HttpServlet {
             } else {
                 out.println("<p>" + request.getRequestURL() + "</p>");
                 Mapping mapping = scanne.ifMethod(request, this.urlMethod);
+
                 if (mapping != null) {
-                    out.println("<p> Classe : " + mapping.getKey() + "</p>");
-                    out.println("<p> Methode: " + mapping.getValue() + "</p>");
-
                     Object result = this.scanne.callMethod(mapping, request);
-                    if (result instanceof ModelView) {
-                        ModelView modelView = (ModelView) result;
-                        String url = modelView.getUrl();
-                        HashMap<String, Object> data = modelView.getData();
 
-                        for (String key : data.keySet()) {
-                            request.setAttribute(key, data.get(key));
+                    String annotationType = mapping.getAnnotationType();
+                    
+                    if ("Restapi".equals(annotationType)) {
+                        response.setContentType("application/json");
+                        
+                        if (result instanceof ModelView) {
+                            ModelView modelView = (ModelView) result;
+                            HashMap<String, Object> data = modelView.getData();
+                            Gson gson = new Gson();
+                            String json = gson.toJson(data);
+                            out.print(json);
+                        } else if (result instanceof String) {
+                            Gson gson = new Gson();
+                            String json = gson.toJson(result);
+                            out.print(json);
                         }
 
-                        request.getRequestDispatcher(url).forward(request, response);
+                    } else if ("AnnotedMth".equals(annotationType)) {
+                        if (result instanceof ModelView) {
+                            ModelView modelView = (ModelView) result;
+                            HashMap<String, Object> data = modelView.getData();
+
+                            for (String key : data.keySet()) {
+                                request.setAttribute(key, data.get(key));
+                            }
+
+                            String url = modelView.getUrl();
+                            request.getRequestDispatcher(url).forward(request, response);
+                        } else {
+                            out.println("<p> Type de retour non reconnu </p>");
+                        }
                     } else {
-                        out.println("<p> Type de retour non reconnu </p>");
+                        out.println("<p> Annotation non supportée </p>");
                     }
                 } else {
                     out.println("<p> Error 404 : Not found </p>");
                 }
             }
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            if (out != null) {
-                out.println("<p> Exception : " + e.getMessage() + "</p>");
-                e.printStackTrace(out);
-            }
-        }catch(Exception e){
+        } catch(Exception e){
             out.println("<p> Exception : " + e.getMessage() + "</p>");
             e.printStackTrace(out);
         }

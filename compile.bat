@@ -22,4 +22,4 @@ REM supprimer le dossier contenant les .classes
 rmdir /s /q  %CLASSES_DIR%
 
 REM couper le fichier .jar vers lib 
-xcopy /s /q /y "Meframework.jar" "C:\Users\Lenovo\Documents\Antema\devoir\Mr_Naina\MeFramework\sprint8\Test\lib"
+xcopy /s /q /y "Meframework.jar" "C:\Users\Ny Antema\Documents\Antema\s4\s4\Mr_Naina\MeFramework\sprint9\Test\lib"
