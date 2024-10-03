@@ -64,20 +64,40 @@ public class Scanner {
     
                     Method[] methods = clazz.getDeclaredMethods();
                     for (Method method : methods) {
-                        if (method.isAnnotationPresent(AnnotedMth.class)) {
-                            AnnotedMth annt = method.getAnnotation(AnnotedMth.class);
+                        String httpMethod = "GET";  // Par défaut, GET
+
+                        // Si la méthode est annotée avec @POST, on change le verbe en POST
+                        if (method.isAnnotationPresent(POST.class)) {
+                            POST postAnnotation = method.getAnnotation(POST.class);
+                            httpMethod = "POST";  // La méthode est POST
+
+                            // Ajout dans urlMethod avec POST pour @POST
                             Mapping map = new Mapping();
-                            map.add(clazz.getName(), method.getName(), "AnnotedMth");
-                            urlMethod.put(annt.value(), map);
-                        } 
+                            map.add(clazz.getName(), method.getName(), "POST", "post");
+                            urlMethod.put(postAnnotation.value(), map);
+                        }
+
+                        // Gestion de @AnnotedMth avec le verbe HTTP défini (GET par défaut, POST si annotée avec @POST)
+                        if (method.isAnnotationPresent(AnnotedMth.class)) {
+                            AnnotedMth annotedMthAnnotation = method.getAnnotation(AnnotedMth.class);
+
+                            // Utiliser le verbe HTTP défini par la vérification précédente
+                            Mapping map = new Mapping();
+                            map.add(clazz.getName(), method.getName(), "AnnotedMth", httpMethod.toLowerCase());
+                            urlMethod.put(annotedMthAnnotation.value(), map);
+                        }
+
+                        // Gestion de @Restapi avec le verbe HTTP défini (GET par défaut, POST si annotée avec @POST)
                         if (method.isAnnotationPresent(Restapi.class)) {
-                            Restapi restapi = method.getAnnotation(Restapi.class);
-                            Mapping map = urlMethod.get(restapi.value());
+                            Restapi restapiAnnotation = method.getAnnotation(Restapi.class);
+
+                            // Utiliser le verbe HTTP défini par la vérification précédente
+                            Mapping map = urlMethod.get(restapiAnnotation.value());
                             if (map == null) {
                                 map = new Mapping();
                             }
-                            map.add(clazz.getName(), method.getName(), "Restapi");
-                            urlMethod.put(restapi.value(), map);
+                            map.add(clazz.getName(), method.getName(), "Restapi", httpMethod.toLowerCase());
+                            urlMethod.put(restapiAnnotation.value(), map);
                         }
                     }
                 }

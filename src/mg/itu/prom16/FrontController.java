@@ -31,20 +31,20 @@ public class FrontController extends HttpServlet {
         }
     }
     
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException, Exception {
+    public void processRequest(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException, Exception {
         response.setContentType("text/html;charset=UTF-8");
 
-        PrintWriter out=null;
+        PrintWriter out = null;
         try {
             out = response.getWriter();
             String uri = request.getRequestURI();
+            String method = request.getMethod();  // Méthode employée (GET ou POST)
             String contextPath = request.getContextPath();
             String path = uri.substring(contextPath.length());
 
-            // System.out.println(path);
-            
             if ("/".equals(path)) {
+                // Affiche la liste des contrôleurs et méthodes annotées
                 List<String> controllerList = (List<String>) getServletContext().getAttribute("controllerList");
                 HashMap<String, Mapping> urlMethod = (HashMap<String, Mapping>) getServletContext().getAttribute("urlMethod");
 
@@ -70,14 +70,19 @@ public class FrontController extends HttpServlet {
                 out.println("</body>");
                 out.println("</html>");
             } else {
-                out.println("<p>" + request.getRequestURL() + "</p>");
                 Mapping mapping = scanne.ifMethod(request, this.urlMethod);
 
                 if (mapping != null) {
+                    String expectedVerb = mapping.getVerb();  
+
+                    if (!method.equalsIgnoreCase(expectedVerb)) {
+                        throw new ServletException("Erreur : la méthode HTTP " + method + " ne correspond pas à " + expectedVerb);
+                    }
+
                     Object result = this.scanne.callMethod(mapping, request);
 
                     String annotationType = mapping.getAnnotationType();
-                    
+
                     if ("Restapi".equals(annotationType)) {
                         response.setContentType("application/json");
                         
@@ -114,12 +119,11 @@ public class FrontController extends HttpServlet {
                     out.println("<p> Error 404 : Not found </p>");
                 }
             }
-        } catch(Exception e){
+        } catch (Exception e) {
             out.println("<p> Exception : " + e.getMessage() + "</p>");
             e.printStackTrace(out);
-        }
-        finally{
-            if(out!=null){
+        } finally {
+            if (out != null) {
                 out.close();
             }
         }

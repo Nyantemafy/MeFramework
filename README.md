@@ -18,6 +18,7 @@ Bonjour :
         .param-value : controller
         .url-pattern : /
     > mettre l'Annotation RestApi pour avoir en json les resultats
+    > Annote les methodes par GET ou POST si non par defaut c'est un GET
 
 *Fonctionnalite :
     >retourne l'url present
@@ -28,4 +29,5 @@ Bonjour :
     >Gere les exception sur le jsp et le controllerr Tomcat
     >pouvoir gere les session  
     >Gere les json
+    >Gere la methode post
 
