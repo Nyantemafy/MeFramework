@@ -1,6 +1,7 @@
 package mg.itu.prom16;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -8,6 +9,8 @@ import java.lang.reflect.*;
 import java.net.URL;
 import java.util.*;
 import java.io.IOException;
+import java.io.InputStream;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -16,6 +19,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 import jakarta.servlet.RequestDispatcher;
 
 public class Scanner {
@@ -111,7 +115,7 @@ public class Scanner {
             }
         }
     }
-    
+
     public static void checkMethods(Class<?> controllerClass) throws Exception {
         Map<String, String> annotatedMethods = new HashMap<>();
 
@@ -222,16 +226,34 @@ public class Scanner {
     
             if (parameter.isAnnotationPresent(Param.class)) {
                 Param param = parameter.getAnnotation(Param.class);
+                System.out.println("ici c'est param");
                 String paramName = param.name();
-                String paramValue = request.getParameter(paramName);
+                System.out.println("Nom du paramètre : " + paramName);
+                String paramValue = null;
+                if(paramType == String.class){
+                    paramValue = request.getParameter(paramName);
+                } else if (paramType == Part.class) {
+                    Part file = request.getPart(paramName);  
+                    if (file != null) {
+                        String fileName = this.extractFileName(file);
+                        saveFile(file, fileName); 
+                        params[i] = file;  
+                        System.out.println("Hita i :" + fileName);
+                    } else {
+                        throw new Exception("Fichier non reçu");
+                    }
+                }
+                
+                System.out.println("paramValue : " + paramValue);
                 params[i] = convertParameter(paramValue, paramType);
                 System.out.println("Valeur du paramètre : " + params[i]);
-    
-                if (paramType != String.class) {
-                    System.out.println("Appel de createModelObject pour le type : " + paramType.getName());
+                
+                if (paramType != String.class && paramType != Part.class) {
+                    System.out.println("Appel de createModelObject pour le type : " + Part.class);
+                    System.out.println("Appel de paramType pour le type : " + paramType);
                     params[i] = createModelObject(request, paramType.getName());
                     System.out.println("Objet créé : " + params[i]);
-                }                           
+                }
             } else if (paramType == CurrentSession.class) {
                 System.out.println("CurrentSession");
                 params[i] = new CurrentSession(request.getSession());
@@ -241,7 +263,8 @@ public class Scanner {
             }
         }
         return params;
-    }    
+    }  
+
     public Object createModelObject(HttpServletRequest request, String nameObject) throws Exception {
         System.out.println("createModelObject appelé pour : " + nameObject);
         
@@ -318,12 +341,49 @@ public class Scanner {
             return Double.parseDouble(value);
         } else if (targetType == boolean.class || targetType == Boolean.class) {
             return Boolean.parseBoolean(value);
-        }
+        } 
     
         // Ajoutez d'autres types de conversion si nécessaire
     
         return value;
     }    
+
+    private String extractFileName(Part part) {
+        String contentDisposition = part.getHeader("content-disposition");
+        if (contentDisposition == null) {
+            return null;  
+        }
+    
+        String[] elements = contentDisposition.split(";");
+        
+        for (String element : elements) {
+            String trimmedElement = element.trim();  
+            if (trimmedElement.startsWith("filename")) {
+                return trimmedElement.substring(trimmedElement.indexOf('=') + 1).trim().replace("\"", "");
+            }
+        }
+        
+        return null;  
+    }
+
+    public void saveFile(Part file, String fileName) throws IOException {
+        String uploads = "C:\\Users\\Ny Antema\\Documents\\Antema\\s4\\s4\\Mr_Naina\\upload\\"; 
+        File uploadDir = new File(uploads);
+
+        if (!uploadDir.exists()) {
+            uploadDir.mkdirs();
+        }
+
+        File uploadedFile = new File(uploadDir, fileName);
+        try (InputStream input = file.getInputStream(); 
+             FileOutputStream output = new FileOutputStream(uploadedFile)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = input.read(buffer)) != -1) {
+                output.write(buffer, 0, bytesRead);
+            }
+        }
+    }
 
 } 
 

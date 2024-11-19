@@ -19,6 +19,7 @@ Bonjour :
         .url-pattern : /
     > mettre l'Annotation RestApi pour avoir en json les resultats
     > Annote les methodes par GET ou POST si non par defaut c'est un GET
+    > metter l'anotation Part a cote du parametre qui a le file upload dans la fonction 
 
 *Fonctionnalite :
     >retourne l'url present
@@ -32,4 +33,4 @@ Bonjour :
     >Gere la methode post
     >Gere la methode, verb et url
     >Gere les page d'exception et 404
-
+    >upload file

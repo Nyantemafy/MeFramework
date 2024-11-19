@@ -13,7 +13,9 @@ import java.util.HashMap;
 import java.util.Set;
 import com.google.gson.Gson;
 import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.annotation.MultipartConfig;
 
+@MultipartConfig
 public class FrontController extends HttpServlet {
     List<String> ListController;
     HashMap<String, Mapping> urlMethod;
