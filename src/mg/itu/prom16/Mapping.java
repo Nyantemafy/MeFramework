@@ -1,30 +1,66 @@
 package mg.itu.prom16;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+
 public class Mapping {
     String nameClass;
-    String nameMethod; 
-    String annotationType;
-    String verb;
+    Set<VerbAction> verbActions ;
+    String annotation;
+    
+    public Mapping(String className, String annot) {
+        this.nameClass = className;
+        this.verbActions = new HashSet<>();
+        this.annotation = annot;
+    }
 
-    public void add(String n1, String n2, String n3, String n4) {
+    public void add(String n1) {
         this.nameClass = n1;
-        this.nameMethod = n2;
-        this.annotationType = n3;
-        this.verb = n4;
+        this.verbActions = new HashSet<>(); 
     }
 
-    public String getValue() {
-        return nameMethod;
-    }
-
-    public String getKey(){
+    public String getKey() {
         return nameClass;
     }
 
-    public String getAnnotationType() {
-        return annotationType;
+    public String getAnnotation() {
+        return annotation;
     }
-    public String getVerb() {
-        return verb;
+
+    public Set<VerbAction> getVerbActions() {
+        return verbActions;
     }
+
+    public boolean hasVerbAction(String verb, String action) {
+        for (VerbAction v : verbActions) {
+            if (v.getVerb().equalsIgnoreCase(verb) && v.getAction().equals(action)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void addVerbAction(VerbAction verbAction) throws Exception {
+        if (!this.verbActions.add(verbAction)) {
+            throw new Exception("Duplicate method and verb combination: " + verbAction.getAction() + " with verb " + verbAction.getVerb());
+        }
+    }
+
+    public VerbAction getVerbAction(String verb) {
+        for (VerbAction verbAction : verbActions) {
+            if (verbAction.getVerb().equalsIgnoreCase(verb)) {
+                return verbAction;
+            }
+        }
+        return null;
+    }
+
+    public Set<String> getAvailableVerbs() {
+        return verbActions.stream()
+                        .map(VerbAction::getVerb)
+                        .collect(Collectors.toSet());
+    }  
+    
 }

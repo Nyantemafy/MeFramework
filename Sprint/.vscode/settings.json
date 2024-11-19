@@ -1,8 +1,0 @@
-{
-    "java.project.referencedLibraries": [
-        "lib/**/*.jar",
-        "lib/servlet-api.jar",
-        "c:\\Program Files\\Apache Software Foundation\\Tomcat 10.1\\lib\\servlet-api.jar",
-        "c:\\Program Files\\Apache Software Foundation\\Tomcat 10.1\\lib\\jakartaee-migration-1.0.7-shaded.jar"
-    ]
-}

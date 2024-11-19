@@ -59,45 +59,49 @@ public class Scanner {
                 Class<?> clazz = Class.forName(className);
                 if (clazz.isAnnotationPresent(AnnotedController.class)) {
                     controllerList.add(className);
-    
-                    checkMethods(clazz);
-    
+                    
+                    // try {
+                    // checkMethods(clazz);
+                        
+                    // } catch (Exception e) {
+                    //     throw e;
+                    // }
+                    
+                    String url = null;
+                    String annotation = null;
                     Method[] methods = clazz.getDeclaredMethods();
                     for (Method method : methods) {
-                        String httpMethod = "GET";  // Par défaut, GET
+                        String httpMethod = "GET";  
 
-                        // Si la méthode est annotée avec @POST, on change le verbe en POST
                         if (method.isAnnotationPresent(POST.class)) {
-                            POST postAnnotation = method.getAnnotation(POST.class);
-                            httpMethod = "POST";  // La méthode est POST
-
-                            // Ajout dans urlMethod avec POST pour @POST
-                            Mapping map = new Mapping();
-                            map.add(clazz.getName(), method.getName(), "POST", "post");
-                            urlMethod.put(postAnnotation.value(), map);
+                            httpMethod = "POST";
                         }
 
-                        // Gestion de @AnnotedMth avec le verbe HTTP défini (GET par défaut, POST si annotée avec @POST)
                         if (method.isAnnotationPresent(AnnotedMth.class)) {
                             AnnotedMth annotedMthAnnotation = method.getAnnotation(AnnotedMth.class);
-
-                            // Utiliser le verbe HTTP défini par la vérification précédente
-                            Mapping map = new Mapping();
-                            map.add(clazz.getName(), method.getName(), "AnnotedMth", httpMethod.toLowerCase());
-                            urlMethod.put(annotedMthAnnotation.value(), map);
+                            url = annotedMthAnnotation.value();
+                            annotation = "AnnotedMth";
                         }
 
-                        // Gestion de @Restapi avec le verbe HTTP défini (GET par défaut, POST si annotée avec @POST)
                         if (method.isAnnotationPresent(Restapi.class)) {
                             Restapi restapiAnnotation = method.getAnnotation(Restapi.class);
-
-                            // Utiliser le verbe HTTP défini par la vérification précédente
-                            Mapping map = urlMethod.get(restapiAnnotation.value());
-                            if (map == null) {
-                                map = new Mapping();
+                            url = restapiAnnotation.value();
+                            annotation = "Restapi";
+                        }
+                        
+                        if (url != null) {
+                            Mapping mapping = urlMethod.get(url);
+                            Class<?>[] paramTypes = method.getParameterTypes();
+                            VerbAction verbAction = new VerbAction(method.getName(), httpMethod, paramTypes);
+    
+                            if (mapping != null) {
+                                ifDuplicate(mapping, url, verbAction);
+                                mapping.addVerbAction(verbAction);
+                            } else {
+                                mapping = new Mapping(clazz.getName(), annotation);
+                                mapping.addVerbAction(verbAction);
+                                urlMethod.put(url, mapping);
                             }
-                            map.add(clazz.getName(), method.getName(), "Restapi", httpMethod.toLowerCase());
-                            urlMethod.put(restapiAnnotation.value(), map);
                         }
                     }
                 }
@@ -105,7 +109,7 @@ public class Scanner {
         }
     }
     
-   public static void checkMethods(Class<?> controllerClass) throws Exception {
+    public static void checkMethods(Class<?> controllerClass) throws Exception {
         Map<String, String> annotatedMethods = new HashMap<>();
 
         for (Method method : controllerClass.getDeclaredMethods()) {
@@ -123,21 +127,30 @@ public class Scanner {
         }
     }
 
-    public String extractRelativePath(HttpServletRequest request) {
+    public String relativePath(HttpServletRequest request) {
         String fullUrl = request.getRequestURL().toString();
         String[] relativePath = fullUrl.split("/");
         return relativePath[relativePath.length - 1];
     }
 
-    public Mapping ifMethod(HttpServletRequest request, HashMap<String, Mapping> urlMethod) {
-        String method = this.extractRelativePath(request);
+    public Mapping getMethode(HttpServletRequest request, HashMap<String, Mapping> urlMethod) {
+        String method = this.relativePath(request);
         return urlMethod.get(method);
     }
     
-    public Object callMethod(Mapping mapping, HttpServletRequest request) throws Exception {
+    public Object invokeMethod(Mapping mapping, HttpServletRequest request) throws Exception {
         System.out.println("Hello World!");
         Class<?> clazz = Class.forName(mapping.getKey());
-        Method method = findMethod(clazz, mapping.getValue());
+        Set<VerbAction> verbActions = mapping.getVerbActions();
+        Method method = null;
+        if (!verbActions.isEmpty()) {
+            VerbAction action = verbActions.iterator().next();
+            String methodName = action.getAction();
+            method = findMethod(clazz, methodName);
+            System.out.println("Méthode trouvée : " + method.getName());
+        } else {
+            System.out.println("Aucune action trouvée pour la classe " + clazz.getName());
+        }
         Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
         Object[] params = getMethodParameters(method, request);
         return method.invoke(controllerInstance, params);
@@ -153,6 +166,14 @@ public class Scanner {
         throw new NoSuchMethodException("Method " + methodName + " not found in " + clazz.getName());
     }
 
+    public void ifDuplicate(Mapping mapping, String nameUrl, VerbAction action) throws Exception {
+        for (VerbAction act : mapping.getVerbActions()) {
+            if (act.getVerb().toUpperCase().trim().equals(action.getVerb().toUpperCase().trim())) {
+                throw new Exception("methode et verb incorrect");
+            }
+        }
+    }
+
     public Object[] getMethodParameters(Method method, HttpServletRequest request) throws Exception {
         Parameter[] parameters = method.getParameters();
         Object[] params = new Object[parameters.length];
@@ -164,6 +185,7 @@ public class Scanner {
             if (parameter.isAnnotationPresent(Param.class)) {
                 Param param = parameter.getAnnotation(Param.class);
                 String paramName = param.name();
+                System.out.println("Nom du paramètre : " + paramName);
                 String paramValue = request.getParameter(paramName);
                 params[i] = convertParameter(paramValue, paramType);
                 System.out.println("Valeur du paramètre : " + params[i]);
