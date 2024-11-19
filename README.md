@@ -30,4 +30,6 @@ Bonjour :
     >pouvoir gere les session  
     >Gere les json
     >Gere la methode post
+    >Gere la methode, verb et url
+    >Gere les page d'exception et 404
 

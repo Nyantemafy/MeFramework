@@ -1,11 +1,13 @@
 package mg.itu.prom16;
 
 import java.io.File;
+import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.*;
 import java.net.URL;
 import java.util.*;
+import java.io.IOException;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -14,6 +16,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.RequestDispatcher;
 
 public class Scanner {
     public void scann(HttpServlet svr, List<String> controllerList, HashMap<String, Mapping> urlMethod) {
@@ -174,6 +177,41 @@ public class Scanner {
         }
     }
 
+    public void redirigeException(HttpServletRequest request, HttpServletResponse response, String errorMessage, int statusCode)
+        throws IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        response.setStatus(statusCode);
+
+        PrintWriter out = response.getWriter();
+        try {
+            out.println("<!DOCTYPE html>");
+            out.println("<html>");
+            out.println("<head>");
+            out.println("<title>Error</title>");
+            out.println("<style>");
+            out.println(".error-container {");
+            out.println("  background-color: red;");
+            out.println("  color: black;");
+            out.println("  padding: 20px;");
+            out.println("  text-align: center;");
+            out.println("  margin: 100px auto;");
+            out.println("  width: 50%;");
+            out.println("  border-radius: 10px;");
+            out.println("}");
+            out.println("</style>");
+            out.println("</head>");
+            out.println("<body>");
+            out.println("<div class='error-container'>");
+            out.println("<h1>Error " + statusCode + "</h1>");
+            out.println("<p>" + errorMessage + "</p>");
+            out.println("</div>");
+            out.println("</body>");
+            out.println("</html>");
+        } finally {
+            out.close();
+        }
+    } 
+
     public Object[] getMethodParameters(Method method, HttpServletRequest request) throws Exception {
         Parameter[] parameters = method.getParameters();
         Object[] params = new Object[parameters.length];
@@ -185,7 +223,6 @@ public class Scanner {
             if (parameter.isAnnotationPresent(Param.class)) {
                 Param param = parameter.getAnnotation(Param.class);
                 String paramName = param.name();
-                System.out.println("Nom du paramètre : " + paramName);
                 String paramValue = request.getParameter(paramName);
                 params[i] = convertParameter(paramValue, paramType);
                 System.out.println("Valeur du paramètre : " + params[i]);

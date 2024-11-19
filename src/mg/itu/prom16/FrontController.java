@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import com.google.gson.Gson;
+import jakarta.servlet.RequestDispatcher;
 
 public class FrontController extends HttpServlet {
     List<String> ListController;
@@ -135,19 +136,12 @@ public class FrontController extends HttpServlet {
                                 out.println("<p> Annotation non supportée </p>");
                             }
                     }
-
-                    if (!verbMatched) {
-                        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                        out.println("<p>Error 404 : Not found</p>");
-                    }
                 } else {
-                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    out.println("<p>Error 404 : Mapping non trouvé</p>");
+                    this.scanne.redirigeException(request, response, "Error 404: NOT FOUND", HttpServletResponse.SC_NOT_FOUND);
                 }
             }
         } catch (Exception e) {
-            out.println("<p> Exception : " + e.getMessage() + "</p>");
-            e.printStackTrace(out);
+            this.scanne.redirigeException(request, response, e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         } finally {
             if (out != null) {
                 out.close();
