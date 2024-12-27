@@ -2,6 +2,8 @@ package mg.itu.prom16;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,7 +14,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import com.google.gson.Gson;
-import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.annotation.MultipartConfig;
 
 @MultipartConfig
@@ -125,7 +126,25 @@ public class FrontController extends HttpServlet {
                                     ModelView modelView = (ModelView) result;
                                     HashMap<String, Object> data = modelView.getData();
 
+                                    List<ValidationResult> validationResults = (List<ValidationResult>) request.getAttribute("validationResults");
+                                    Map<String, String> formData = (Map<String, String>) request.getAttribute("formData");
+                                    if (validationResults != null) {
+                                        System.out.println("validationResults trouvés dans la requête:");
+                                            for (ValidationResult validationResult : validationResults) {
+                                                System.out.println(validationResult); 
+                                            }
+                                        data.put("validationResults", validationResults);
+                                    }
+                                    if (formData != null) {
+                                        System.out.println("formData trouvé dans la requête:");
+                                        for (Map.Entry<String, String> entry : formData.entrySet()) {
+                                            System.out.println("Clé : " + entry.getKey() + ", Valeur : " + entry.getValue());
+                                        }
+                                        data.put("formData", formData);
+                                    }
+
                                     for (String key : data.keySet()) {
+                                        System.out.println("key :" + data.get(key));
                                         request.setAttribute(key, data.get(key));
                                     }
 

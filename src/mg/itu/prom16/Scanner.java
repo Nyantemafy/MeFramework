@@ -3,26 +3,21 @@ package mg.itu.prom16;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.lang.reflect.*;
 import java.net.URL;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.io.IOException;
 import java.io.InputStream;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
-import jakarta.servlet.RequestDispatcher;
 
 public class Scanner {
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
+
     public void scann(HttpServlet svr, List<String> controllerList, HashMap<String, Mapping> urlMethod) {
         try {
             ServletContext context = svr.getServletContext();
@@ -66,13 +61,6 @@ public class Scanner {
                 Class<?> clazz = Class.forName(className);
                 if (clazz.isAnnotationPresent(AnnotedController.class)) {
                     controllerList.add(className);
-                    
-                    // try {
-                    // checkMethods(clazz);
-                        
-                    // } catch (Exception e) {
-                    //     throw e;
-                    // }
                     
                     String url = null;
                     String annotation = null;
@@ -146,7 +134,6 @@ public class Scanner {
     }
     
     public Object invokeMethod(Mapping mapping, HttpServletRequest request) throws Exception {
-        System.out.println("Hello World!");
         Class<?> clazz = Class.forName(mapping.getKey());
         Set<VerbAction> verbActions = mapping.getVerbActions();
         Method method = null;
@@ -154,15 +141,16 @@ public class Scanner {
             VerbAction action = verbActions.iterator().next();
             String methodName = action.getAction();
             method = findMethod(clazz, methodName);
-            System.out.println("Méthode trouvée : " + method.getName());
         } else {
             System.out.println("Aucune action trouvée pour la classe " + clazz.getName());
         }
+    
         Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
         Object[] params = getMethodParameters(method, request);
+    
         return method.invoke(controllerInstance, params);
     }
-
+    
     public Method findMethod(Class<?> clazz, String methodName) throws NoSuchMethodException {
         Method[] methods = clazz.getMethods();
         for (Method method : methods) {
@@ -267,68 +255,101 @@ public class Scanner {
 
     public Object createModelObject(HttpServletRequest request, String nameObject) throws Exception {
         System.out.println("createModelObject appelé pour : " + nameObject);
-        
+    
         Class<?> clazz = Class.forName(nameObject);
         Object obj = clazz.getDeclaredConstructor().newInstance();
-        
-        Enumeration<String> parameterNames = request.getParameterNames();
     
+        Enumeration<String> parameterNames = request.getParameterNames();
         if (!parameterNames.hasMoreElements()) {
             System.out.println("Aucun paramètre trouvé");
+            return obj;
         }
-        
+    
+        List<ValidationResult> validationResults = new ArrayList<>();
+    
         while (parameterNames.hasMoreElements()) {
             String parameterName = parameterNames.nextElement();
-            System.out.println("Paramètre trouvé : " + parameterName);
+            String value = request.getParameter(parameterName);
+            System.out.println("Paramètre trouvé : " + parameterName + " avec la valeur : " + value);
     
-                Enumeration<String> innerParameterNames = request.getParameterNames();
+            String[] nameAttribute = parameterName.trim().split("\\.");
+            if (nameAttribute.length < 2) {
+                System.out.println("Nom de l'attribut invalide, ignoré : " + parameterName);
+                continue;
+            }
     
-                if (!innerParameterNames.hasMoreElements()) {
-                    System.out.println("Aucun attribut trouvé");
+            String attributeName = nameAttribute[1];
+            String formattedName = attributeName.substring(0, 1).toUpperCase() + attributeName.substring(1);
+            String setterMethodName = "set" + formattedName;
+    
+            Field field;
+            try {
+                field = clazz.getDeclaredField(attributeName);
+            } catch (NoSuchFieldException e) {
+                System.out.println("Attribut non trouvé : " + attributeName + ", ignoré.");
+                continue;
+            }
+    
+            boolean hasRequiredAnnotation = field.isAnnotationPresent(Required.class);
+            boolean hasEmailAnnotation = field.isAnnotationPresent(Email.class);
+    
+            ValidationResult validationResult = new ValidationResult(value, null);
+    
+            if (hasRequiredAnnotation) {
+                if (value == null || value.trim().isEmpty()) {
+                    validationResult.addError("Le champ " + attributeName + " est requis mais n'a pas de valeur.");
                 }
+            }
     
-                while (innerParameterNames.hasMoreElements()) {
-                    String attrib = innerParameterNames.nextElement();
-                    System.out.println("Attribut trouvé : " + attrib);
+            if (hasEmailAnnotation) {
+                if (value != null && !value.trim().isEmpty() && !value.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                    validationResult.addError("Le champ " + attributeName + " doit contenir une adresse email valide.");
+                }
+            }
     
-                        String value = request.getParameter(attrib);
-                        System.out.println("Valeur de l'attribut : " + value);
+            if (validationResult.hasErrors()) {
+                validationResults.add(validationResult);
+                continue;
+            }
 
-                        String[] nameAttribute = attrib.trim().split("\\.");
-                        String firstLetter = nameAttribute[1].substring(0, 1).toUpperCase();
-                        String restOfTheWord = nameAttribute[1].substring(1);
-                        String formattedName = firstLetter + restOfTheWord;
-                        System.out.println(formattedName);
-                        String setterMethodName = "set" + formattedName;
-                        System.out.println("Méthode setter recherchée : " + setterMethodName);
-    
-                            Method[] methods = clazz.getMethods();
-                            Method setterMethod = null;
-                            for (Method method : methods) {
-                                if (method.getName().equalsIgnoreCase(setterMethodName)) {
-                                    setterMethod = method;
-                                    break;
-                                }
-                            }
-    
-                            if (setterMethod != null) {
-                                Class<?>[] parameterTypes = setterMethod.getParameterTypes();
-                                Object convertedValue = convertParameter(value, parameterTypes[0]);
-                                System.out.println("Valeur convertie : " + convertedValue + " pour le type : " + parameterTypes[0].getName());
-                                setterMethod.invoke(obj, convertedValue);
-                                System.out.println("Valeur définie dans l'objet : " + convertedValue);
-                            } else {
-                                throw new Exception("Méthode setter non trouvée pour l'attribut : " + nameAttribute);
-                            }
+            Method setterMethod = null;
+            for (Method method : clazz.getMethods()) {
+                if (method.getName().equalsIgnoreCase(setterMethodName)) {
+                    setterMethod = method;
+                    break;
                 }
+            }
+    
+            if (setterMethod != null) {
+                Class<?> parameterType = setterMethod.getParameterTypes()[0];
+                Object convertedValue = convertParameter(value, parameterType);
+                setterMethod.invoke(obj, convertedValue);
+                System.out.println("Valeur définie dans l'objet : " + convertedValue);
+            } else {
+                System.out.println("Méthode setter non trouvée pour : " + attributeName);
+            }
         }
+
+        if (!validationResults.isEmpty()) {
+            request.setAttribute("validationResults", validationResults);
+    
+            Map<String, String> formData = new HashMap<>();
+            while (parameterNames.hasMoreElements()) {
+                String paramName = parameterNames.nextElement();
+                formData.put(paramName, request.getParameter(paramName));
+            }
+            request.setAttribute("formData", formData);
+            
+            return null;
+        }
+    
         System.out.println("Objet final : " + obj);
         return obj;
     }
-        
+       
     private Object convertParameter(String value, Class<?> targetType) {
-        if (value == null) {
-            return null;
+        if (value == null || value.trim().isEmpty()) {
+            return null;  
         }
     
         if (targetType == String.class) {
@@ -342,9 +363,7 @@ public class Scanner {
         } else if (targetType == boolean.class || targetType == Boolean.class) {
             return Boolean.parseBoolean(value);
         } 
-    
-        // Ajoutez d'autres types de conversion si nécessaire
-    
+        
         return value;
     }    
 
