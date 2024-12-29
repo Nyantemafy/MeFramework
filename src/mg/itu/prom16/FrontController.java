@@ -8,6 +8,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -39,7 +41,7 @@ public class FrontController extends HttpServlet {
     public void processRequest(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException, Exception {
         response.setContentType("text/html;charset=UTF-8");
-
+        
         PrintWriter out = null;
         try {
             out = response.getWriter();
@@ -55,6 +57,9 @@ public class FrontController extends HttpServlet {
                 out.println("<html>");
                 out.println("<head>");
                 out.println("<title>Liste des contrôleurs et méthodes</title>");
+                out.println("<style>");
+                out.println(".admin-url { color: red; font-weight: bold; }"); 
+                out.println("</style>");
                 out.println("</head>");
                 out.println("<body>");
                 out.println("<h1>Liste des contrôleurs et méthodes annotées</h1>");
@@ -67,7 +72,18 @@ public class FrontController extends HttpServlet {
                         if (entry.getValue().getKey().equals(controller)) {
                             Set<VerbAction> actions = entry.getValue().getVerbActions();
                             for (VerbAction action : actions) {
-                                out.println("<li>URL: " + entry.getKey() + " - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction() + "</li>");
+                                boolean isAdmin = "Autorisation".equals(entry.getValue().getAnnotation());
+
+                                if (isAdmin) {
+                                    out.println("<li class='admin-url'>");
+                                    out.println("URL: " + entry.getKey() + " - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction());
+                                    out.println("</li>");
+                                } else {
+                                    String fullUrl = "http://localhost:8080" + contextPath + "/" + entry.getKey();
+                                    out.println("<li>");
+                                    out.println("URL: <a href='" + fullUrl + "'>" + entry.getKey() + "</a> - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction());
+                                    out.println("</li>");
+                                }
 
                                 out.println("<ul>");
                                 out.println("<li>Paramètres : ");

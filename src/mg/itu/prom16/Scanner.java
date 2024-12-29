@@ -83,6 +83,13 @@ public class Scanner {
                             url = restapiAnnotation.value();
                             annotation = "Restapi";
                         }
+
+                        if (method.isAnnotationPresent(Autorisation.class)) {
+                            Autorisation annotedMthAnnotation = method.getAnnotation(Autorisation.class);
+                            String role = annotedMthAnnotation.role();
+                            annotation = "Autorisation";
+                            System.out.println("Role : " + role);
+                        }
                         
                         if (url != null) {
                             Mapping mapping = urlMethod.get(url);
