@@ -9,6 +9,7 @@ public class Mapping {
     String nameClass;
     Set<VerbAction> verbActions ;
     String annotation;
+    String role;
     
     public Mapping(String className, String annot) {
         this.nameClass = className;
@@ -27,6 +28,14 @@ public class Mapping {
 
     public String getAnnotation() {
         return annotation;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role){
+        this.role = role;
     }
 
     public Set<VerbAction> getVerbActions() {

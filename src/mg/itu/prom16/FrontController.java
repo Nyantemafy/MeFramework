@@ -2,17 +2,20 @@ package mg.itu.prom16;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import com.google.gson.Gson;
-import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.annotation.MultipartConfig;
 
 @MultipartConfig
@@ -38,7 +41,7 @@ public class FrontController extends HttpServlet {
     public void processRequest(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException, Exception {
         response.setContentType("text/html;charset=UTF-8");
-
+        
         PrintWriter out = null;
         try {
             out = response.getWriter();
@@ -54,6 +57,9 @@ public class FrontController extends HttpServlet {
                 out.println("<html>");
                 out.println("<head>");
                 out.println("<title>Liste des contrôleurs et méthodes</title>");
+                out.println("<style>");
+                out.println(".admin-url { color: red; font-weight: bold; }"); 
+                out.println("</style>");
                 out.println("</head>");
                 out.println("<body>");
                 out.println("<h1>Liste des contrôleurs et méthodes annotées</h1>");
@@ -65,12 +71,39 @@ public class FrontController extends HttpServlet {
                     for (Map.Entry<String, Mapping> entry : urlMethod.entrySet()) {
                         if (entry.getValue().getKey().equals(controller)) {
                             Set<VerbAction> actions = entry.getValue().getVerbActions();
+                            
+                            // Récupération du contrôleur pour vérifier l'annotation
+                            Class<?> controllerClass = Class.forName(entry.getValue().getKey());
+                    
+                            // Vérifie si l'annotation "Autorisation" est présente sur la classe du contrôleur
+                            Autorisation autorisationAnnotation = controllerClass.getAnnotation(Autorisation.class);
+                    
+                            if (autorisationAnnotation != null) {
+                                // Si l'annotation est présente, on récupère le rôle requis
+                                String requiredRole = autorisationAnnotation.role();
+                    
+                                // Récupère le rôle de l'utilisateur à partir de la session
+                                String userRole = (String) request.getSession().getAttribute("role");
+                    
+                                // Vérifie si l'utilisateur a le rôle requis
+                                if (userRole == null || !userRole.equals(requiredRole)) {
+                                    out.println("<li class='admin-url'>");
+                                    out.println("Accès interdit : Vous devez être " + requiredRole + " pour accéder à cette URL.");
+                                    out.println("</li>");
+                                    continue; // Passe à l'itération suivante sans afficher cette URL
+                                }
+                            }
+                    
+                            // Traitement des actions et des paramètres (comme dans le code précédent)
                             for (VerbAction action : actions) {
-                                out.println("<li>URL: " + entry.getKey() + " - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction() + "</li>");
-
+                                String fullUrl = "http://localhost:8080" + contextPath + "/" + entry.getKey();
+                                out.println("<li>");
+                                out.println("URL: <a href='" + fullUrl + "'>" + entry.getKey() + "</a> - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction());
+                                out.println("</li>");
+                    
+                                // Affichage des paramètres
                                 out.println("<ul>");
                                 out.println("<li>Paramètres : ");
-
                                 Class<?>[] paramTypes = action.getParameterTypes();
                                 if (paramTypes.length > 0) {
                                     for (Class<?> paramType : paramTypes) {
@@ -79,14 +112,11 @@ public class FrontController extends HttpServlet {
                                 } else {
                                     out.println("Aucun paramètre");
                                 }
-
                                 out.println("</li>");
                                 out.println("</ul>");
                             }
                         }
                     }
-                    out.println("</ul>");
-                    out.println("</li>");
                 }
 
                 out.println("</ul>");
@@ -96,6 +126,15 @@ public class FrontController extends HttpServlet {
                 out.println("<p>" + request.getRequestURL() + "</p>");
                 Mapping mapping = scanne.getMethode(request, this.urlMethod);
                 if (mapping != null) {
+                    
+                    if (mapping.getRole() != null) {
+                        String userRole = (String) request.getSession().getAttribute("role");
+                        if (userRole == null || !userRole.equals(mapping.getRole())) {
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accès interdit !");
+                            return;
+                        }
+                    }
+
                     Set<VerbAction> verbActions = mapping.getVerbActions();
                     boolean verbMatched = false;
 
@@ -125,7 +164,25 @@ public class FrontController extends HttpServlet {
                                     ModelView modelView = (ModelView) result;
                                     HashMap<String, Object> data = modelView.getData();
 
+                                    List<ValidationResult> validationResults = (List<ValidationResult>) request.getAttribute("validationResults");
+                                    Map<String, String> formData = (Map<String, String>) request.getAttribute("formData");
+                                    if (validationResults != null) {
+                                        System.out.println("validationResults trouvés dans la requête:");
+                                            for (ValidationResult validationResult : validationResults) {
+                                                System.out.println(validationResult); 
+                                            }
+                                        data.put("validationResults", validationResults);
+                                    }
+                                    if (formData != null) {
+                                        System.out.println("formData trouvé dans la requête:");
+                                        for (Map.Entry<String, String> entry : formData.entrySet()) {
+                                            System.out.println("Clé : " + entry.getKey() + ", Valeur : " + entry.getValue());
+                                        }
+                                        data.put("formData", formData);
+                                    }
+
                                     for (String key : data.keySet()) {
+                                        System.out.println("key :" + data.get(key));
                                         request.setAttribute(key, data.get(key));
                                     }
 

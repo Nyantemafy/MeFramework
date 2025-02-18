@@ -15,6 +15,10 @@ public class ModelView {
         return url;
     }
 
+    public String setUrl(String urls) {
+        return this.url = urls;
+    }
+
     public HashMap<String, Object> getData() {
         return data;
     }
