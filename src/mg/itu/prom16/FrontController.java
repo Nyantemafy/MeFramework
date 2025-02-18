@@ -71,23 +71,39 @@ public class FrontController extends HttpServlet {
                     for (Map.Entry<String, Mapping> entry : urlMethod.entrySet()) {
                         if (entry.getValue().getKey().equals(controller)) {
                             Set<VerbAction> actions = entry.getValue().getVerbActions();
-                            for (VerbAction action : actions) {
-                                boolean isAdmin = "Autorisation".equals(entry.getValue().getAnnotation());
-
-                                if (isAdmin) {
+                            
+                            // Récupération du contrôleur pour vérifier l'annotation
+                            Class<?> controllerClass = Class.forName(entry.getValue().getKey());
+                    
+                            // Vérifie si l'annotation "Autorisation" est présente sur la classe du contrôleur
+                            Autorisation autorisationAnnotation = controllerClass.getAnnotation(Autorisation.class);
+                    
+                            if (autorisationAnnotation != null) {
+                                // Si l'annotation est présente, on récupère le rôle requis
+                                String requiredRole = autorisationAnnotation.role();
+                    
+                                // Récupère le rôle de l'utilisateur à partir de la session
+                                String userRole = (String) request.getSession().getAttribute("role");
+                    
+                                // Vérifie si l'utilisateur a le rôle requis
+                                if (userRole == null || !userRole.equals(requiredRole)) {
                                     out.println("<li class='admin-url'>");
-                                    out.println("URL: " + entry.getKey() + " - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction());
+                                    out.println("Accès interdit : Vous devez être " + requiredRole + " pour accéder à cette URL.");
                                     out.println("</li>");
-                                } else {
-                                    String fullUrl = "http://localhost:8080" + contextPath + "/" + entry.getKey();
-                                    out.println("<li>");
-                                    out.println("URL: <a href='" + fullUrl + "'>" + entry.getKey() + "</a> - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction());
-                                    out.println("</li>");
+                                    continue; // Passe à l'itération suivante sans afficher cette URL
                                 }
-
+                            }
+                    
+                            // Traitement des actions et des paramètres (comme dans le code précédent)
+                            for (VerbAction action : actions) {
+                                String fullUrl = "http://localhost:8080" + contextPath + "/" + entry.getKey();
+                                out.println("<li>");
+                                out.println("URL: <a href='" + fullUrl + "'>" + entry.getKey() + "</a> - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction());
+                                out.println("</li>");
+                    
+                                // Affichage des paramètres
                                 out.println("<ul>");
                                 out.println("<li>Paramètres : ");
-
                                 Class<?>[] paramTypes = action.getParameterTypes();
                                 if (paramTypes.length > 0) {
                                     for (Class<?> paramType : paramTypes) {
@@ -96,14 +112,11 @@ public class FrontController extends HttpServlet {
                                 } else {
                                     out.println("Aucun paramètre");
                                 }
-
                                 out.println("</li>");
                                 out.println("</ul>");
                             }
                         }
                     }
-                    out.println("</ul>");
-                    out.println("</li>");
                 }
 
                 out.println("</ul>");
@@ -113,6 +126,15 @@ public class FrontController extends HttpServlet {
                 out.println("<p>" + request.getRequestURL() + "</p>");
                 Mapping mapping = scanne.getMethode(request, this.urlMethod);
                 if (mapping != null) {
+                    
+                    if (mapping.getRole() != null) {
+                        String userRole = (String) request.getSession().getAttribute("role");
+                        if (userRole == null || !userRole.equals(mapping.getRole())) {
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Accès interdit !");
+                            return;
+                        }
+                    }
+
                     Set<VerbAction> verbActions = mapping.getVerbActions();
                     boolean verbMatched = false;
 

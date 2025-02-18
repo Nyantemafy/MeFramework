@@ -61,45 +61,55 @@ public class Scanner {
                 Class<?> clazz = Class.forName(className);
                 if (clazz.isAnnotationPresent(AnnotedController.class)) {
                     controllerList.add(className);
-                    
+    
                     String url = null;
-                    Mapping mapping = urlMethod.get(url);
                     String annotation = null;
                     Method[] methods = clazz.getDeclaredMethods();
                     if (clazz.isAnnotationPresent(Autorisation.class)) {
                         Autorisation autorisationClass = clazz.getAnnotation(Autorisation.class);
                         String roleController = autorisationClass.role();
-                        mapping.setRole(roleController);
+    
+                        // Créer un objet Mapping pour l'URL si nécessaire
+                        Mapping mapping = urlMethod.get(url); // Récupérer l'objet Mapping pour cette URL
+                        if (mapping == null) {
+                            // Si le mapping est null, on le crée et on l'ajoute à la map
+                            mapping = new Mapping(clazz.getName(), annotation);
+                            urlMethod.put(url, mapping);
+                        }
+                        mapping.setRole(roleController); // Définir le rôle requis
                         System.out.println("Contrôleur : " + clazz.getName() + " - Role requis : " + roleController);
                     }
-
+    
                     for (Method method : methods) {
-                        String httpMethod = "GET";  
-
+                        String httpMethod = "GET";  // Par défaut
+    
                         if (method.isAnnotationPresent(POST.class)) {
                             httpMethod = "POST";
                         }
-
+    
                         if (method.isAnnotationPresent(AnnotedMth.class)) {
                             AnnotedMth annotedMthAnnotation = method.getAnnotation(AnnotedMth.class);
                             url = annotedMthAnnotation.value();
                             annotation = "AnnotedMth";
                         }
-
+    
                         if (method.isAnnotationPresent(Restapi.class)) {
                             Restapi restapiAnnotation = method.getAnnotation(Restapi.class);
                             url = restapiAnnotation.value();
                             annotation = "Restapi";
                         }
-                        
+    
                         if (url != null) {
+                            Mapping mapping = urlMethod.get(url);  // Récupérer le Mapping pour cette URL
                             Class<?>[] paramTypes = method.getParameterTypes();
                             VerbAction verbAction = new VerbAction(method.getName(), httpMethod, paramTypes);
     
                             if (mapping != null) {
+                                // Si le Mapping existe, on vérifie les doublons et on ajoute l'action
                                 ifDuplicate(mapping, url, verbAction);
                                 mapping.addVerbAction(verbAction);
                             } else {
+                                // Si le Mapping n'existe pas, on le crée, ajoute l'action et l'ajoute à la map
                                 mapping = new Mapping(clazz.getName(), annotation);
                                 mapping.addVerbAction(verbAction);
                                 urlMethod.put(url, mapping);
@@ -110,7 +120,7 @@ public class Scanner {
             }
         }
     }
-
+    
     public static void checkMethods(Class<?> controllerClass) throws Exception {
         Map<String, String> annotatedMethods = new HashMap<>();
 
