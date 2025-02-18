@@ -63,8 +63,16 @@ public class Scanner {
                     controllerList.add(className);
                     
                     String url = null;
+                    Mapping mapping = urlMethod.get(url);
                     String annotation = null;
                     Method[] methods = clazz.getDeclaredMethods();
+                    if (clazz.isAnnotationPresent(Autorisation.class)) {
+                        Autorisation autorisationClass = clazz.getAnnotation(Autorisation.class);
+                        String roleController = autorisationClass.role();
+                        mapping.setRole(roleController);
+                        System.out.println("Contrôleur : " + clazz.getName() + " - Role requis : " + roleController);
+                    }
+
                     for (Method method : methods) {
                         String httpMethod = "GET";  
 
@@ -83,16 +91,8 @@ public class Scanner {
                             url = restapiAnnotation.value();
                             annotation = "Restapi";
                         }
-
-                        if (method.isAnnotationPresent(Autorisation.class)) {
-                            Autorisation annotedMthAnnotation = method.getAnnotation(Autorisation.class);
-                            String role = annotedMthAnnotation.role();
-                            annotation = "Autorisation";
-                            System.out.println("Role : " + role);
-                        }
                         
                         if (url != null) {
-                            Mapping mapping = urlMethod.get(url);
                             Class<?>[] paramTypes = method.getParameterTypes();
                             VerbAction verbAction = new VerbAction(method.getName(), httpMethod, paramTypes);
     
