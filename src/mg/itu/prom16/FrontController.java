@@ -1,7 +1,9 @@
 package mg.itu.prom16;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
 
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
@@ -42,13 +44,17 @@ public class FrontController extends HttpServlet {
         throws ServletException, IOException, Exception {
         response.setContentType("text/html;charset=UTF-8");
         
+
         PrintWriter out = null;
         try {
             out = response.getWriter();
             String uri = request.getRequestURI();
+            System.out.println(uri);
             String method = request.getMethod();
             String contextPath = request.getContextPath();
             String path = uri.substring(contextPath.length());
+
+System.out.println(path);
 
             if ("/".equals(path)) {
                 List<String> controllerList = (List<String>) getServletContext().getAttribute("controllerList");
@@ -65,6 +71,7 @@ public class FrontController extends HttpServlet {
                 out.println("<h1>Liste des contrôleurs et méthodes annotées</h1>");
                 out.println("<ul>");
 
+
                 for (String controller : controllerList) {
                     out.println("<li><strong>" + controller + "</strong>");
                     out.println("<ul>");
@@ -72,36 +79,29 @@ public class FrontController extends HttpServlet {
                         if (entry.getValue().getKey().equals(controller)) {
                             Set<VerbAction> actions = entry.getValue().getVerbActions();
                             
-                            // Récupération du contrôleur pour vérifier l'annotation
                             Class<?> controllerClass = Class.forName(entry.getValue().getKey());
                     
-                            // Vérifie si l'annotation "Autorisation" est présente sur la classe du contrôleur
                             Autorisation autorisationAnnotation = controllerClass.getAnnotation(Autorisation.class);
                     
                             if (autorisationAnnotation != null) {
-                                // Si l'annotation est présente, on récupère le rôle requis
                                 String requiredRole = autorisationAnnotation.role();
                     
-                                // Récupère le rôle de l'utilisateur à partir de la session
                                 String userRole = (String) request.getSession().getAttribute("role");
                     
-                                // Vérifie si l'utilisateur a le rôle requis
                                 if (userRole == null || !userRole.equals(requiredRole)) {
                                     out.println("<li class='admin-url'>");
                                     out.println("Accès interdit : Vous devez être " + requiredRole + " pour accéder à cette URL.");
                                     out.println("</li>");
-                                    continue; // Passe à l'itération suivante sans afficher cette URL
+                                    continue; 
                                 }
                             }
                     
-                            // Traitement des actions et des paramètres (comme dans le code précédent)
                             for (VerbAction action : actions) {
                                 String fullUrl = "http://localhost:8080" + contextPath + "/" + entry.getKey();
                                 out.println("<li>");
                                 out.println("URL: <a href='" + fullUrl + "'>" + entry.getKey() + "</a> - Verbe: " + action.getVerb() + " - Méthode: " + action.getAction());
                                 out.println("</li>");
                     
-                                // Affichage des paramètres
                                 out.println("<ul>");
                                 out.println("<li>Paramètres : ");
                                 Class<?>[] paramTypes = action.getParameterTypes();
@@ -122,6 +122,9 @@ public class FrontController extends HttpServlet {
                 out.println("</ul>");
                 out.println("</body>");
                 out.println("</html>");
+            }
+            else if(path.startsWith("asset")){
+                TraiteStatic(path, response);
             } else {
                 out.println("<p>" + request.getRequestURL() + "</p>");
                 Mapping mapping = scanne.getMethode(request, this.urlMethod);
@@ -208,16 +211,33 @@ public class FrontController extends HttpServlet {
         }
     }
 
+    public void TraiteStatic(String path, HttpServletResponse response) throws IOException{
+        String staticDirect = getServletContext().getRealPath("/asset");
+        path= path.replace("asset/", "\\");
+
+        File f = new File(staticDirect, path);
+
+        if(f.exists()){
+            String mimeType = getServletContext().getMimeType(f.getName());
+            response.setContentType(mimeType);
+
+            Files.copy(f.toPath(), response.getOutputStream());
+        } else {
+            response.sendError((HttpServletResponse.SC_NOT_FOUND));
+        }
+        
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-
             processRequest(request, response);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
