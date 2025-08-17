@@ -20,5 +20,5 @@ jar cvf %JAR_FILE% -C %CLASSES_DIR% .
 REM supprimer le dossier contenant les .classes 
 rmdir /s /q %CLASSES_DIR%
 
-REM couper le fichier .jar vers lib 
-xcopy /s /q /y "Meframework.jar" "C:\Users\Lenovo\Documents\Antema\devoir\s5\Mr_naina\sprint15_bis\Test\lib"
+@REM REM couper le fichier .jar vers lib 
+@REM xcopy /s /q /y "Meframework.jar" "C:\Users\Lenovo\Documents\Antema\devoir\s5\Mr_naina\sprint15_bis\Test\lib"

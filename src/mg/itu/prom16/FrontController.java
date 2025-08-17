@@ -54,7 +54,7 @@ public class FrontController extends HttpServlet {
             String contextPath = request.getContextPath();
             String path = uri.substring(contextPath.length());
 
-System.out.println(path);
+        System.out.println(path);
 
             if ("/".equals(path)) {
                 List<String> controllerList = (List<String>) getServletContext().getAttribute("controllerList");
@@ -211,20 +211,21 @@ System.out.println(path);
         }
     }
 
-    public void TraiteStatic(String path, HttpServletResponse response) throws IOException{
+    public void TraiteStatic(String path, HttpServletResponse response) throws Exception{
         String staticDirect = getServletContext().getRealPath("/asset");
         path= path.replace("asset/", "\\");
+        throw new Exception("EPOOOOOooooooooooooooooooo");
+        
+        // File f = new File(staticDirect, path);
 
-        File f = new File(staticDirect, path);
+        // if(f.exists()){
+        //     String mimeType = getServletContext().getMimeType(f.getName());
+        //     response.setContentType(mimeType);
 
-        if(f.exists()){
-            String mimeType = getServletContext().getMimeType(f.getName());
-            response.setContentType(mimeType);
-
-            Files.copy(f.toPath(), response.getOutputStream());
-        } else {
-            response.sendError((HttpServletResponse.SC_NOT_FOUND));
-        }
+        //     Files.copy(f.toPath(), response.getOutputStream());
+        // } else {
+        //     response.sendError((HttpServletResponse.SC_NOT_FOUND));
+        // }
         
     }
 
